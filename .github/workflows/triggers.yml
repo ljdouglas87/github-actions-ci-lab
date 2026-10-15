@@ -1,0 +1,55 @@
+name: Triggers
+run-name: ${{ github.event_name }} on ${{ github.ref_name }}
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Where to pretend to deploy
+        type: choice
+        options: [dev, staging, prod]
+        default: dev
+      dry-run:
+        description: Only print what would happen
+        type: boolean
+        default: true
+      note:
+        description: A short note
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  show:
+    runs-on: ubuntu-latest
+    steps:
+      - name: What started this run?
+        run: |
+          echo "event: $GITHUB_EVENT_NAME"
+          echo "ref:   $GITHUB_REF"
+          echo "sha:   $GITHUB_SHA"
+
+      - name: Manual inputs
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          TARGET: ${{ inputs.environment }}
+          DRY_RUN: ${{ inputs.dry-run }}
+          NOTE: ${{ inputs.note }}
+        run: echo "environment=$TARGET dry-run=$DRY_RUN note=$NOTE"
+
+      - name: Pull request activity
+        if: github.event_name == 'pull_request'
+        env:
+          ACTION: ${{ github.event.action }}
+          TITLE: ${{ github.event.pull_request.title }}
+        run: echo "action=$ACTION title=$TITLE"
