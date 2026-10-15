@@ -1,0 +1,93 @@
+name: Values
+run-name: Values on ${{ github.ref_name }} by ${{ github.actor }}
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  COURSE: GitHub Actions
+
+jobs:
+  produce:
+    runs-on: ubuntu-latest
+    env:
+      STAGE: test
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: env at three levels
+        env:
+          STAGE: unit
+        run: echo "COURSE=$COURSE STAGE=$STAGE"
+
+      - name: A variable and a secret
+        env:
+          APP_NAME: ${{ vars.APP_NAME }}
+          API_KEY: ${{ secrets.API_KEY }}
+        run: |
+          echo "vars.APP_NAME   = $APP_NAME"
+          echo "secrets.API_KEY = $API_KEY"
+          echo "The secret is ${#API_KEY} characters long"
+
+      - name: Contexts and expressions
+        run: |
+          echo "event:    ${{ github.event_name }}"
+          echo "on main:  ${{ github.ref == 'refs/heads/main' }}"
+          echo "format:   ${{ format('{0} run {1}', github.workflow, github.run_number) }}"
+          echo "fallback: ${{ vars.NOT_SET || 'default value' }}"
+
+      - name: Default environment variables
+        run: |
+          echo "$GITHUB_REPOSITORY on $GITHUB_REF_NAME at $GITHUB_SHA"
+          echo "run $GITHUB_RUN_NUMBER by $GITHUB_ACTOR on $RUNNER_OS"
+
+      - name: Write a step output
+        id: version
+        run: echo "version=1.0.$GITHUB_RUN_NUMBER" >> "$GITHUB_OUTPUT"
+
+      - name: Write an environment variable for later steps
+        run: echo "BUILD_LABEL=build-${{ steps.version.outputs.version }}" >> "$GITHUB_ENV"
+
+      - name: Add a folder to the PATH
+        run: |
+          mkdir -p "$HOME/lab-tools"
+          printf '#!/bin/sh\necho "my-tool says hello"\n' > "$HOME/lab-tools/my-tool"
+          chmod +x "$HOME/lab-tools/my-tool"
+          echo "$HOME/lab-tools" >> "$GITHUB_PATH"
+
+      - name: Run a tool from that folder
+        run: my-tool
+
+      - name: Workflow commands
+        run: |
+          echo "::notice title=Version::Building ${{ steps.version.outputs.version }}"
+          echo "::group::Tool versions"
+          node --version
+          git --version
+          echo "::endgroup::"
+          TOKEN="tok-$RANDOM$RANDOM"
+          echo "::add-mask::$TOKEN"
+          echo "The generated token is $TOKEN"
+
+      - name: Write the job summary
+        run: |
+          {
+            echo "### Build ${{ steps.version.outputs.version }}"
+            echo ""
+            echo "| Item | Value |"
+            echo "| --- | --- |"
+            echo "| Commit | ${GITHUB_SHA::7} |"
+            echo "| Label | $BUILD_LABEL |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  consume:
+    needs: produce
+    runs-on: ubuntu-latest
+    steps:
+      - name: Read the other job's output
+        env:
+          VERSION: ${{ needs.produce.outputs.version }}
+        run: echo "produce built version $VERSION"
