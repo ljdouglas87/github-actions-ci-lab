@@ -11,5 +11,5 @@ test("multiply returns the product", () => {
 });
 
 test("subtract returns the difference", () => {
-  assert.equal(subtract(10, 4), 7);
+  assert.equal(subtract(10, 4), 6);
 });
