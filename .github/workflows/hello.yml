@@ -19,7 +19,7 @@ jobs:
         run: echo "Hello, GitHub Actions!"
 
       - name: Report the build status
-        run: echo "Build status: green"
+        run: 'echo "Build status: green"'
 
       - name: Look around the runner
         run: |
