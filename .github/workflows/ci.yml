@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  test:
+    name: Test - Node ${{ matrix.node-version }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [22, 24]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Run tests
+        id: tests
+        run: |
+          node --test \
+            --test-reporter=spec --test-reporter-destination=stdout \
+            --test-reporter=tap --test-reporter-destination=test-results.tap
+
+      - name: Upload test report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-report-node-${{ matrix.node-version }}
+          path: test-results.tap
+          retention-days: 7
+
+      - name: Write the job summary
+        if: ${{ !cancelled() && hashFiles('test-results.tap') != '' }}
+        env:
+          NODE: ${{ matrix.node-version }}
+          OUTCOME: ${{ steps.tests.outcome }}
+        run: |
+          {
+            echo "### Tests on Node $NODE: $OUTCOME"
+            echo '```text'
+            tail -n 8 test-results.tap
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  comment:
+    name: Comment on the pull request
+    needs: test
+    if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Post the test result
+        uses: actions/github-script@v9
+        env:
+          RESULT: ${{ needs.test.result }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `CI result for ${process.env.SHA.slice(0, 7)}: **${process.env.RESULT}**`,
+            });
