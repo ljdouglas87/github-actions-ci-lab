@@ -34,7 +34,7 @@ jobs:
 
       - name: Contexts and expressions
         run: |
-          echo "event:    ${{ github.event_nme }}"
+          echo "event:    ${{ github.event_name }}"
           echo "on main:  ${{ github.ref == 'refs/heads/main' }}"
           echo "format:   ${{ format('{0} run {1}', github.workflow, github.run_number) }}"
           echo "fallback: ${{ vars.NOT_SET || 'default value' }}"
