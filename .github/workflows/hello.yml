@@ -1,0 +1,25 @@
+name: Hello
+run-name: Hello from ${{ github.actor }} (${{ github.event_name }})
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  greet:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Say hello
+        run: echo "Hello, GitHub Actions!"
+
+      - name: Look around the runner
+        run: |
+          echo "Runner OS: $RUNNER_OS"
+          echo "Workspace: $GITHUB_WORKSPACE"
+          ls -la
