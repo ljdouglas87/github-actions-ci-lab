@@ -1,0 +1,67 @@
+name: Failures
+run-name: Failures (problem = ${{ inputs.problem }})
+
+on:
+  workflow_dispatch:
+    inputs:
+      problem:
+        description: Make something go wrong
+        type: choice
+        options: [none, fail, hang, hang-long]
+        default: none
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  work:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Advisory check
+        continue-on-error: true
+        run: |
+          echo "::warning title=Advisory::This check failed, and the job goes on"
+          exit 1
+
+      - name: Maybe fail
+        if: inputs.problem == 'fail'
+        run: |
+          echo "::error title=Requested failure::The problem input was fail"
+          exit 1
+
+      - name: Maybe hang
+        if: inputs.problem == 'hang'
+        timeout-minutes: 1
+        run: sleep 300
+
+      - name: Maybe hang long
+        if: inputs.problem == 'hang-long'
+        timeout-minutes: 10
+        run: sleep 900
+
+      - name: Runs only if everything before succeeded
+        run: echo "success() is true"
+
+      - name: Runs only after a failure
+        if: failure()
+        run: echo "failure() is true"
+
+      - name: Runs unless the run was cancelled
+        if: ${{ !cancelled() }}
+        run: echo "job.status is ${{ job.status }}"
+
+      - name: Runs only if the run was cancelled
+        if: cancelled()
+        run: echo "cancelled() is true"
+
+  after:
+    needs: work
+    runs-on: ubuntu-latest
+    steps:
+      - name: Runs only when work succeeded
+        run: echo "work succeeded, so this job runs"
