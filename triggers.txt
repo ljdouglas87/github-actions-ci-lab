@@ -1,0 +1,6 @@
+Events used in this lab
+
+push               commits arrive on a branch
+pull_request       a pull request is opened, updated or labeled
+workflow_dispatch  someone clicks Run workflow
+schedule           a timer, in UTC
