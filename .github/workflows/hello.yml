@@ -18,6 +18,9 @@ jobs:
       - name: Say hello
         run: echo "Hello, GitHub Actions!"
 
+      - name: Report the build status
+        run: echo "Build status: green"
+
       - name: Look around the runner
         run: |
           echo "Runner OS: $RUNNER_OS"
