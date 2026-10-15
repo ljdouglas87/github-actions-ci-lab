@@ -1,0 +1,16 @@
+name: Scheduled
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report the time
+        run: echo "Run at $(date -u '+%H:%M') UTC on $GITHUB_REF_NAME"
